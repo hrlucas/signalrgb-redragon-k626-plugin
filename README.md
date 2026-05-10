@@ -134,13 +134,7 @@ In SignalRGB, select the device recognized as **Redragon Ashe K626 ABNT2** and c
 
 The repository keeps the keyboard image at `assets/Redragon-Ashe-K626.png` for documentation and project organization.
 
-The plugin uses jsDelivr as the default image URL because it usually works better for apps that need the image file directly:
-
-```js
-const DEVICE_IMAGE_URL = "https://cdn.jsdelivr.net/gh/hrlucas/signalrgb-redragon-k626-plugin@main/assets/Redragon-Ashe-K626.png";
-```
-
-GitHub Raw can also be used as an alternative:
+The plugin uses the GitHub Raw URL directly so SignalRGB receives the PNG with the expected transparency and formatting:
 
 ```js
 const DEVICE_IMAGE_URL = "https://raw.githubusercontent.com/hrlucas/signalrgb-redragon-k626-plugin/main/assets/Redragon-Ashe-K626.png";

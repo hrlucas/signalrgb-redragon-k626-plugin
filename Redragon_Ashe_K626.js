@@ -26,7 +26,7 @@ const AUTHOR_GITHUB_URL = "https://github.com/hrlucas";
 const DOCUMENTATION_URL = "https://github.com/hrlucas/signalrgb-redragon-k626-plugin";
 
 const DEVICE_NAME = "Redragon Ashe K626 ABNT2";
-const DEVICE_IMAGE_URL = "https://cdn.jsdelivr.net/gh/hrlucas/signalrgb-redragon-k626-plugin@main/assets/Redragon-Ashe-K626.png";
+const DEVICE_IMAGE_URL = "https://raw.githubusercontent.com/hrlucas/signalrgb-redragon-k626-plugin/main/assets/Redragon-Ashe-K626.png";
 
 const VENDOR_ID = 0x258a;
 const PRODUCT_ID = 0x0049;
