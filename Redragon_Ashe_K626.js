@@ -1,25 +1,22 @@
 /*
- * Redragon Ashe K626 ABNT2 - SignalRGB Plugin
+ * SignalRGB Plugin for Redragon Ashe K626 ABNT2
+ *
  * Author: Lucas Hochmann Rosa
  * GitHub: https://github.com/hrlucas
  * Repository: https://github.com/hrlucas/signalrgb-redragon-k626-plugin
  *
- * Developed and mapped for the Redragon Ashe K626-KB-B ABNT2 layout.
- * Physical LED mapping by Lucas Hochmann Rosa.
- * Protocol base: Sinowealth HID keyboard protocol.
+ * Developed, cleaned and mapped for the Redragon Ashe K626-KB-B ABNT2 layout.
+ * Physical 79-key LED mapping by Lucas Hochmann Rosa.
+ *
+ * Technical note:
+ * This keyboard communicates through a Sinowealth-compatible HID protocol.
  *
  * Device:
  *   Redragon Ashe RGB K626-KB-B PT-BROWN
  *   VID: 0x258A
  *   PID: 0x0049
  *
- * Notes:
- *   - This plugin forces the K626 ABNT2 model layout.
- *   - Physical layout: 79 LEDs.
- *   - Enter ABNT2 occupies two rows visually, but has only one LED.
- *   - Fn secondary functions such as PrtSc, ScrLk and Pause are intentionally ignored.
- *
- * License: MIT.
+ * License: MIT
  */
 
 import DeviceDiscovery from "@SignalRGB/DeviceDiscovery";
@@ -27,15 +24,18 @@ import DeviceDiscovery from "@SignalRGB/DeviceDiscovery";
 const AUTHOR = "Lucas Hochmann Rosa";
 const AUTHOR_GITHUB_URL = "https://github.com/hrlucas";
 const DOCUMENTATION_URL = "https://github.com/hrlucas/signalrgb-redragon-k626-plugin";
+
 const DEVICE_NAME = "Redragon Ashe K626 ABNT2";
+const DEVICE_IMAGE_URL = "https://cdn.jsdelivr.net/gh/hrlucas/signalrgb-redragon-k626-plugin@main/assets/Redragon-Ashe-K626.png";
+
 const VENDOR_ID = 0x258a;
 const PRODUCT_ID = 0x0049;
-const FORCED_MODEL_ID = 626;
-const LAYOUT_KEY = "K626 Ashe ABNT2 79";
+const MODEL_ID = 626;
+const LAYOUT_NAME = "K626 Ashe ABNT2 79";
+
 const REPORT_LENGTH = 382;
 const REPORT_HEADER = [0x08, 0x0a, 0x7a, 0x01];
 const RGB_DATA_LENGTH = REPORT_LENGTH - REPORT_HEADER.length;
-const DEVICE_IMAGE_URL = "https://cdn.jsdelivr.net/gh/hrlucas/signalrgb-redragon-k626-plugin@main/assets/Redragon-Ashe-K626.png";
 
 export function Name() { return DEVICE_NAME; }
 export function VendorId() { return VENDOR_ID; }
@@ -48,8 +48,6 @@ export function Validate(endpoint) { return endpoint.interface === 1; }
 export function ImageUrl() { return DEVICE_IMAGE_URL; }
 
 /* global
-device:readonly
-console:readonly
 shutdownColor:readonly
 LightingMode:readonly
 forcedColor:readonly
@@ -97,8 +95,8 @@ export function Render() {
 	K626.sendColors();
 }
 
-export function Shutdown(systemSuspending) {
-	const color = systemSuspending ? "#000000" : shutdownColor;
+export function Shutdown(SystemSuspending) {
+	const color = SystemSuspending ? "#000000" : shutdownColor;
 	K626.sendColors(color);
 }
 
@@ -107,8 +105,7 @@ class RedragonAsheK626Protocol {
 		this.Config = {
 			DeviceProductID: 0x0000,
 			DeviceName: DEVICE_NAME,
-			DeviceEndpoint: { interface: 1, usage: 0x0001, usage_page: 0xFF00, collection: 0x0005 },
-			ModelID: FORCED_MODEL_ID,
+			ModelID: MODEL_ID,
 			LedNames: [],
 			LedPositions: [],
 			Leds: [],
@@ -118,12 +115,11 @@ class RedragonAsheK626Protocol {
 	Initialize() {
 		this.Config.DeviceProductID = device.productId();
 
-		const DeviceProperties = K626DeviceLibrary.LEDLibrary[FORCED_MODEL_ID];
+		const deviceProperties = K626DeviceLibrary.LEDLibrary[MODEL_ID];
 
-		if (!DeviceProperties) {
-			device.notify("Unknown device", "Redragon Ashe K626 layout was not found in this plugin.", 1);
-			console.log("Model not found in library!");
-			console.log("Unknown protocol for " + FORCED_MODEL_ID);
+		if (!deviceProperties) {
+			device.notify("Unknown device", "Redragon Ashe K626 model was not found in this plugin.", 1);
+			console.log("Model not found in library: " + MODEL_ID);
 
 			DeviceDiscovery.foundVirtualDevice({
 				type: "keyboard",
@@ -135,10 +131,16 @@ class RedragonAsheK626Protocol {
 			return;
 		}
 
-		const layout = K626DeviceLibrary.LEDLayout[DeviceProperties.layout];
+		const layout = K626DeviceLibrary.LEDLayout[deviceProperties.layout];
 
-		this.Config.ModelID = FORCED_MODEL_ID;
-		this.Config.DeviceName = DeviceProperties.name;
+		if (!layout) {
+			device.notify("Unknown layout", "Redragon Ashe K626 ABNT2 layout was not found in this plugin.", 1);
+			console.log("Layout not found: " + deviceProperties.layout);
+			return;
+		}
+
+		this.Config.ModelID = MODEL_ID;
+		this.Config.DeviceName = deviceProperties.name;
 		this.Config.LedNames = layout.vLedNames;
 		this.Config.LedPositions = layout.vLedPositions;
 		this.Config.Leds = layout.vLeds;
@@ -146,10 +148,11 @@ class RedragonAsheK626Protocol {
 		device.log("Device model found: " + this.Config.DeviceName);
 		device.log("Plugin author: " + AUTHOR + " - " + AUTHOR_GITHUB_URL);
 		device.log("Plugin documentation: " + DOCUMENTATION_URL);
+
 		device.setName(this.Config.DeviceName);
 		device.setSize(layout.size);
 		device.setControllableLeds(this.Config.LedNames, this.Config.LedPositions);
-		device.setImageFromUrl(DeviceProperties.image);
+		device.setImageFromUrl(deviceProperties.image);
 	}
 
 	sendColors(overrideColor) {
@@ -157,10 +160,17 @@ class RedragonAsheK626Protocol {
 			return;
 		}
 
-		const rgbData = new Array(RGB_DATA_LENGTH).fill(0);
+		const rgbData = [];
+
+		// Fill the whole RGB payload with black first.
+		// This avoids stale/undefined LED values that can leave some keys stuck in red or another previous color.
+		for (let i = 0; i < RGB_DATA_LENGTH; i++) {
+			rgbData[i] = 0;
+		}
 
 		for (let i = 0; i < this.Config.Leds.length; i++) {
-			const [x, y] = this.Config.LedPositions[i];
+			const x = this.Config.LedPositions[i][0];
+			const y = this.Config.LedPositions[i][1];
 			const ledIndex = this.Config.Leds[i];
 
 			let color;
@@ -173,16 +183,23 @@ class RedragonAsheK626Protocol {
 				color = device.color(x, y);
 			}
 
-			rgbData[(ledIndex * 3)] = color[0];
-			rgbData[(ledIndex * 3) + 1] = color[1];
-			rgbData[(ledIndex * 3) + 2] = color[2];
+			const rgbOffset = ledIndex * 3;
+
+			if (rgbOffset + 2 >= RGB_DATA_LENGTH) {
+				console.log("Skipping LED index outside report payload: " + ledIndex);
+				continue;
+			}
+
+			rgbData[rgbOffset] = color[0];
+			rgbData[rgbOffset + 1] = color[1];
+			rgbData[rgbOffset + 2] = color[2];
 		}
 
 		this.writeRGBPackage(rgbData);
 	}
 
-	writeRGBPackage(data) {
-		const packet = REPORT_HEADER.concat(data);
+	writeRGBPackage(rgbData) {
+		const packet = REPORT_HEADER.concat(rgbData);
 
 		device.send_report(packet, REPORT_LENGTH);
 		device.pause(1);
@@ -192,15 +209,15 @@ class RedragonAsheK626Protocol {
 class DeviceLibrary {
 	constructor() {
 		this.LEDLibrary = {
-			[FORCED_MODEL_ID]: {
+			626: {
 				name: DEVICE_NAME,
 				image: DEVICE_IMAGE_URL,
-				layout: LAYOUT_KEY
+				layout: LAYOUT_NAME
 			}
 		};
 
 		this.LEDLayout = {
-			[LAYOUT_KEY]: {
+			"K626 Ashe ABNT2 79": {
 				// Physical ABNT2 LED map by Lucas Hochmann Rosa.
 				// 79 LED entries: 17 + 17 + 16 + 17 + 12.
 				// Enter ABNT2 is a single LED shared visually between rows 2 and 3.
@@ -212,7 +229,7 @@ class DeviceLibrary {
 					"Left Ctrl", "Left Win", "Left Alt", "Space", "Right Alt", "Fn", "Right Ctrl", "Left Arrow", "Down Arrow", "Right Arrow", "Num 0", "Num . Del"
 				],
 
-				// Physical LED indexes used by the Sinowealth protocol.
+				// Physical LED indexes used by the Sinowealth-compatible protocol.
 				vLeds: [
 					1, 7, 13, 19, 25, 31, 37, 43, 49, 55, 61, 67, 73, 79, 85, 91, 97,
 					2, 8, 14, 20, 26, 32, 38, 44, 50, 56, 62, 68, 74, 81, 86, 92, 98,
